@@ -1,0 +1,32 @@
+Not all crimes are the same. Some crimes types are more likely to occur than other types depending on the place and time. In this section, we will see how crimes differ between different places at different times.
+
+The first thing we are going to look at is if there is a difference in the number of crimes during specific days of the week. Are there more crimes during weekdays or weekend?
+
+days = ['Monday','Tuesday','Wednesday',  'Thursday', 'Friday', 'Saturday', 'Sunday']
+crimes.groupby([crimes.index.dayofweek]).size().plot(kind='barh')
+plt.ylabel('Days of the week')
+plt.yticks(np.arange(7), days)
+plt.xlabel('Number of crimes')
+plt.title('Number of crimes by day of the week')
+plt.show()
+
+I don't really see something is different between days of the week. Maybe Friday has higher number of crime than other days, but this is still based on the counts and we are not really sure of it means it is always like this.
+
+Now Let's look at crimes per month and see if certain months show more crimes than others.
+
+crimes.groupby([crimes.index.month]).size().plot(kind='barh')
+plt.ylabel('Months of the year')
+plt.xlabel('Number of crimes')
+plt.title('Number of crimes by month of the year')
+plt.show()
+
+
+And similarly for crime location
+
+plt.figure(figsize=(8,10))
+crimes.groupby([crimes['Location Description']]).size().sort_values(ascending=True).plot(kind='barh')
+plt.title('Number of crimes by Location')
+plt.ylabel('Crime Location')
+plt.xlabel('Number of crimes')
+plt.show()
+

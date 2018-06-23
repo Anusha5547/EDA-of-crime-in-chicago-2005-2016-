@@ -1,0 +1,18 @@
+#Where a certain crime type is most likely to happen?
+"""
+In this section, we hope to answer another type of questions: for a given crime (like theft or sexual assault), what is the most likely location for this crime to happen? In this analysis, as with the previous ones, we take each crime type and re-normalize its location frequency to be between zero and one. This way, we can look at the top frequent locations of each crime type (darker red reflect a more frequent location).
+"""
+
+df = normalize(location_by_type)
+ix = AC(3).fit(df.T).labels_.argsort() # a trick to make better heatmaps
+plt.figure(figsize=(17,13))
+plt.imshow(df.T.iloc[ix,:], cmap='Reds')
+plt.colorbar(fraction=0.03)
+plt.xticks(np.arange(df.shape[0]), df.index, rotation='vertical')
+plt.yticks(np.arange(df.shape[1]), df.columns)
+plt.title('Normalized location frequency for each crime')
+plt.grid(False)
+plt.show()
+
+
+#Well, it appears that most crimes occur at either apartments, residence, sidewalks, streets or 'other'. There are few notable exceptions here and there but those places are very frequent. This heatmap got me thinking that I probably should've used more than 20 categories. But that is "left as an exercise for the reader" ;)

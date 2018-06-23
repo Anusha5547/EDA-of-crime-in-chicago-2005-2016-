@@ -1,0 +1,61 @@
+First, we import the required data science packages and get the data. I was not able to import data of previous periods but will continue to work this out.
+
+import numpy as np 
+import pandas as pd 
+import matplotlib.pyplot as plt
+%matplotlib inline
+plt.style.use('seaborn')
+
+# we will skip 2001 - 2005 due to bad quality
+
+crimes1 = pd.read_csv('../input/Chicago_Crimes_2005_to_2007.csv',error_bad_lines=False)
+crimes2 = pd.read_csv('../input/Chicago_Crimes_2008_to_2011.csv',error_bad_lines=False)
+crimes3 = pd.read_csv('../input/Chicago_Crimes_2012_to_2017.csv',error_bad_lines=False)
+crimes = pd.concat([crimes1, crimes2, crimes3], ignore_index=False, axis=0)
+
+del crimes1
+del crimes2
+del crimes3
+
+print('Dataset ready..')
+
+print('Dataset Shape before drop_duplicate : ', crimes.shape)
+crimes.drop_duplicates(subset=['ID', 'Case Number'], inplace=True)
+print('Dataset Shape after drop_duplicate: ', crimes.shape)
+
+crimes.drop(['Unnamed: 0', 'Case Number', 'IUCR', 'X Coordinate', 'Y Coordinate','Updated On','Year', 'FBI Code', 'Beat','Ward','Community Area', 'Location', 'District'], inplace=True, axis=1)
+As we can tell from the first few rows, we have several columns that will help us answer our questions. We will use the 'Date' column to explore temporal patterns, 'Primary Type' and 'Location Description' to investigate their relationship with time (month of the year, time of the day, hour of the day, .. etc). Later we will use geolocation to map out safe spots (and times) in the city.
+
+#Let's have a look at the first 3 records and see if we see what we expect
+crimes.head(3)
+
+Because we are dealing with dates, we need to convert the 'Date' column into a date format that is understandable by Python (and pandas).
+
+# convert dates to pandas datetime format
+crimes.Date = pd.to_datetime(crimes.Date, format='%m/%d/%Y %I:%M:%S %p')
+# setting the index to be the date will help us a lot later on
+crimes.index = pd.DatetimeIndex(crimes.Date)
+How many records we have and how many features for each record?
+
+# of records X # of features
+crimes.shape
+
+Let's make sure we are dealing with the right type of columns
+
+crimes.info()
+
+As 'Location Description', 'Description' and 'Primary Type' columns are actually categorical columns (or factors in R), we will only keep the most frequent categories and then cast them to a categorical type.
+
+loc_to_change  = list(crimes['Location Description'].value_counts()[20:].index)
+desc_to_change = list(crimes['Description'].value_counts()[20:].index)
+#type_to_change = list(crimes['Primary Type'].value_counts()[20:].index)
+
+crimes.loc[crimes['Location Description'].isin(loc_to_change) , crimes.columns=='Location Description'] = 'OTHER'
+crimes.loc[crimes['Description'].isin(desc_to_change) , crimes.columns=='Description'] = 'OTHER'
+#crimes.loc[crimes['Primary Type'].isin(type_to_change) , crimes.columns=='Primary Type'] = 'OTHER'
+# we convert those 3 columns into 'Categorical' types -- works like 'factor' in R
+crimes['Primary Type']         = pd.Categorical(crimes['Primary Type'])
+crimes['Location Description'] = pd.Categorical(crimes['Location Description'])
+crimes['Description']          = pd.Categorical(crimes['Description'])
+At this point, I think we are ready to explore..
+

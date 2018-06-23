@@ -1,0 +1,39 @@
+
+Exploration and Visualization
+At this point, I think we are done with all the preprocessing and cleaning. Now it is time to see what we got. In this section, I will make use of many of pandas functionality like resampling by a time frame and pivot_table (a function that somehow changes the way I think!).
+
+Let us begin by some generic queries, like how many records we have for each month ?
+
+plt.figure(figsize=(11,5))
+crimes.resample('M').size().plot(legend=False)
+plt.title('Number of crimes per month (2005 - 2016)')
+plt.xlabel('Months')
+plt.ylabel('Number of crimes')
+plt.show()
+
+
+This chart shows a clear "periodic" pattern in the crimes over many years. I guess this very periodic pattern is an essential part of why crime a very predictable activity!.
+
+Before we take a deeper look into how other features could mediate such temporal consistency, I first want to answer our first question: How crime has changed over the years? is it decreasing? Let's have a look at what we have (from 2012 to 2016 for now).
+
+In a previous chart, we already looked at the number of weekly crime records. Although it may not be very clear from the previous chart how crime have changed over the years, it still gives somehow similar numbers between 2015 and 2016. Here, we will take a finer scale to get the visualization right. I decided to look at the rolling sum of crimes of the past year. The idea is, for each day, we calculate the sum of crimes of the past year. If this rolling sum is decreasing, then we know for sure that crime rates have been decreasing during that year. On the other hand, if the rolling sum stays the same during a given year, then we can conclude that crime rates stayed the same.
+
+plt.figure(figsize=(11,4))
+crimes.resample('D').size().rolling(365).sum().plot()
+plt.title('Rolling sum of all crimes from 2005 - 2016')
+plt.ylabel('Number of crimes')
+plt.xlabel('Days')
+plt.show()
+
+We see the line decreasing from 2006 up to some point around 2016 after which it stays around the same number of crimes. This all means that 2016 is really no better than 2015, but both years show a much better crime record (in total) than the previous years.
+
+But..
+
+could this figure be too good to be true?
+
+Let's separate crimes by type and see
+
+crimes_count_date = crimes.pivot_table('ID', aggfunc=np.size, columns='Primary Type', index=crimes.index.date, fill_value=0)
+crimes_count_date.index = pd.DatetimeIndex(crimes_count_date.index)
+plo = crimes_count_date.rolling(365).sum().plot(figsize=(12, 30), subplots=True, layout=(-1, 3), sharex=False, sharey=False)
+

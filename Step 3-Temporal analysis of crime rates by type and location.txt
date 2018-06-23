@@ -1,0 +1,93 @@
+#Temporal analysis of crime rates by type and location
+"""
+I am not so excited by the charts so far. They are boring. They do not show me interesting things. It only felt like they make sense. In this section, things are way different. We will directly address the second question in the introduction.
+Not all crimes are the same. Some crimes types are more likely to occur than other types depending on the place and time. In this section, we will see how crimes differ between different places at different times.
+After seeing the base rates of each crime location and type, we will now assume that all crime types (and locations) have the same frequency or, in other words, they are all equal overall. We are interested in detecting how a specific crime type is different across all days of the week or hours of the day.
+Is theft or burglary is more likely to occur at a weekday compared to a weekend? Are they more likely to happen in the morning vs evening or late night ? are they more likely to occur in a street vs a bar?
+Let's dig up using the fantastic 'pivot_table' from pandas.
+"""
+
+hour_by_location = crimes.pivot_table(values='ID', index='Location Description', columns=crimes.index.hour, aggfunc=np.size).fillna(0)
+hour_by_type     = crimes.pivot_table(values='ID', index='Primary Type', columns=crimes.index.hour, aggfunc=np.size).fillna(0)
+hour_by_week     = crimes.pivot_table(values='ID', index=crimes.index.hour, columns=crimes.index.weekday_name, aggfunc=np.size).fillna(0)
+hour_by_week     = hour_by_week[days].T # just reorder columns according to the the order of days
+dayofweek_by_location = crimes.pivot_table(values='ID', index='Location Description', columns=crimes.index.dayofweek, aggfunc=np.size).fillna(0)
+dayofweek_by_type = crimes.pivot_table(values='ID', index='Primary Type', columns=crimes.index.dayofweek, aggfunc=np.size).fillna(0)
+location_by_type  = crimes.pivot_table(values='ID', index='Location Description', columns='Primary Type', aggfunc=np.size).fillna(0)
+#Here I will make nice wrapper functions to make some minimal preprocessing and make the heatmap visualization. A trick I used to make heatmaps nicer looking is to use a clustering algorithm to sort the rows into meaningful groups and use group labels to re-sort our matrix.
+
+from sklearn.cluster import AgglomerativeClustering as AC
+
+def scale_df(df,axis=0):
+    '''
+    A utility function to scale numerical values (z-scale) to have a mean of zero
+    and a unit variance.
+    '''
+    return (df - df.mean(axis=axis)) / df.std(axis=axis)
+	
+def plot_hmap(df, ix=None, cmap='bwr'):
+    '''
+    A function to plot heatmaps that show temporal patterns
+    '''
+    if ix is None:
+        ix = np.arange(df.shape[0])
+    plt.imshow(df.iloc[ix,:], cmap=cmap)
+    plt.colorbar(fraction=0.03)
+    plt.yticks(np.arange(df.shape[0]), df.index[ix])
+    plt.xticks(np.arange(df.shape[1]))
+    plt.grid(False)
+    plt.show()
+    
+def scale_and_plot(df, ix = None):
+    '''
+    A wrapper function to calculate the scaled values within each row of df and plot_hmap
+    '''
+    df_marginal_scaled = scale_df(df.T).T
+    if ix is None:
+        ix = AC(4).fit(df_marginal_scaled).labels_.argsort() # a trick to make better heatmaps
+    cap = np.min([np.max(df_marginal_scaled.as_matrix()), np.abs(np.min(df_marginal_scaled.as_matrix()))])
+    df_marginal_scaled = np.clip(df_marginal_scaled, -1*cap, cap)
+    plot_hmap(df_marginal_scaled, ix=ix)
+    
+def normalize(df):
+ result = df.copy()
+    for feature_name in df.columns:
+        max_value = df[feature_name].max()
+        min_value = df[feature_name].min()
+        result[feature_name] = (df[feature_name] - min_value) / (max_value - min_value)
+    return result
+	
+"""
+Before we go on, let me explain how we got those heatmaps. For each set of those pots, I re-scaled counts of crime records in each hour within each crime type to be z-scaled (to have a mean of zero and a unit standard deviation). So it is a "within-type/ across-hours" scaling that aims to show differences between frequencies of crimes at different hours. All types have the save "average" of crime counts, but not all hours have the same average. So a negative value indicate a lower frequency while a positive value indicate a higher frequency for that crime to occur in a particular hour.
+
+First, let's see if there are "day crimes vs night crimes" thing. As you can see, some crimes have their peaks during the early morning (upper part of the heatmap), other crimes peak during the day (mid-part of the heatmap) and the final group of crimes peak at night (lower part of the heatmap
+"""
+plt.figure(figsize=(15,12))
+scale_and_plot(hour_by_type)
+
+
+#Similarly, we will look at crime locations and see some locations are more likely to have crimes during the day vs. during the night. The upper part of the heatmap shows locations that have crime peaks during the day (with a couple of them peaking at 9AM). The mid-part shows locations that have crime peaks during the night ad finally the lower part (a single observation) shows that bars have crime peaks during early morning.
+
+plt.figure(figsize=(15,7))
+scale_and_plot(hour_by_location)
+
+#But is this 'day crimes vs. night crimes" thing consistent during all days of the week? I mean, can't we expect weekends to show a different pattern in the timing of crimes? Sure they do.
+
+plt.figure(figsize=(12,4))
+scale_and_plot(hour_by_week, ix=np.arange(7))
+
+"""
+I am excited to see more about this "weekday crime vs. weekend crime" thing. So let's dig deeper and see of they have anything with crime types.
+The heatmap below indicates few interesting things (x-axis is days of the week). Some crimes types peak at specific days of the week (like Friday or Saturday). Other types are more like weekday crimes (showing in the mid-part of the heatmap) or weekend crimes (showing in the lower part of the heatmap).
+"""
+
+plt.figure(figsize=(17,17))
+scale_and_plot(dayofweek_by_type)
+
+#Similarly, we will use crime locations instead of crime types to find, again, that there are weekday locations and weekend locations...
+
+plt.figure(figsize=(15,12))
+scale_and_plot(dayofweek_by_location)
+
+
+
